@@ -25,6 +25,17 @@ class InvalidTokenException extends GE.LogicalException {
 }
 
 /**
+ * Raised when token is invalid or expired
+ *
+ * @class InvalidTokenException
+ */
+class InvalidAnswerException extends GE.LogicalException {
+  static invalidAnswer () {
+    return new this('Invalid answer', 400)
+  }
+}
+
+/**
  * The personna class is used to manage the user profile
  * creation, verification and updation with ease.
  *
@@ -91,6 +102,21 @@ class Persona {
     return payload[this.config.password]
   }
 
+   /**
+   * Returns the security question value from an object
+   *
+   * @method _getAnswer
+   *
+   * @param  {Object}         payload
+   *
+   * @return {String}
+   *
+   * @private
+   */
+  _getAnswer (payload) {
+    return payload[this.config.questionAnswer]
+  }
+
   /**
    * Updates email field value on an object
    *
@@ -117,6 +143,20 @@ class Persona {
    */
   _setPassword (payload, password) {
     payload[this.config.password] = password
+  }
+
+    /**
+   * Sets security question answer field value on an object
+   *
+   * @method _setAnswer
+   *
+   * @param  {Object}     payload
+   * @param  {String}     answer
+   *
+   * @private
+   */
+  _setAnswer (payload, password) {
+    payload[this.config.questionAnswer] = answer
   }
 
   /**
@@ -717,6 +757,8 @@ class Persona {
     const token = await this.generateToken(user, 'password')
 
     this.Event.fire('forgot::password', { user, token })
+
+    return token
   }
 
   /**
@@ -747,6 +789,17 @@ class Persona {
     }
 
     const user = tokenRow.getRelated('user')
+    
+    // If a security questions are configured...compare the preset answer with the answer given
+    if (this.config.question){
+      const answer = this._getAnswer(user)
+      const guess = this._getAnswer(payload)
+      
+      if (guess.toLowerCase() !== answer.toLowerCase()) {
+        throw InvalidAnswerException.invalidAnswer()
+      }
+    }
+    
     this._setPassword(user, this._getPassword(payload))
 
     await user.save()
