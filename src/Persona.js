@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /**
  * adonis-persona
@@ -7,11 +7,11 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
-*/
+ */
 
-const moment = require('moment')
-const randtoken = require('rand-token')
-const GE = require('@adonisjs/generic-exceptions')
+const moment = require("moment");
+const randtoken = require("rand-token");
+const GE = require("@adonisjs/generic-exceptions");
 
 /**
  * Raised when token is invalid or expired
@@ -19,8 +19,8 @@ const GE = require('@adonisjs/generic-exceptions')
  * @class InvalidTokenException
  */
 class InvalidTokenException extends GE.LogicalException {
-  static invalidToken () {
-    return new this('The token is invalid or expired', 400)
+  static invalidToken() {
+    return new this("The token is invalid or expired", 400);
   }
 }
 
@@ -30,8 +30,8 @@ class InvalidTokenException extends GE.LogicalException {
  * @class InvalidTokenException
  */
 class InvalidAnswerException extends GE.LogicalException {
-  static invalidAnswer () {
-    return new this('Invalid answer', 400)
+  static invalidAnswer() {
+    return new this("Invalid answer", 400);
   }
 }
 
@@ -47,29 +47,29 @@ class InvalidAnswerException extends GE.LogicalException {
  * @param {Object} Hash
  */
 class Persona {
-  constructor (Config, Validator, Event, Encryption, Hash) {
-    this.config = Config.merge('persona', {
-      uids: ['email'],
-      email: 'email',
-      password: 'password',
-      model: 'App/Models/User',
-      newAccountState: 'pending',
-      verifiedAccountState: 'active',
-      dateFormat: 'YYYY-MM-DD HH:mm:ss'
-    })
+  constructor(Config, Validator, Event, Encryption, Hash) {
+    this.config = Config.merge("persona", {
+      uids: ["email"],
+      email: "email",
+      password: "password",
+      model: "App/Models/User",
+      newAccountState: "pending",
+      verifiedAccountState: "active",
+      dateFormat: "YYYY-MM-DD HH:mm:ss",
+    });
 
     /**
      * Varients of password fields
      */
-    this._oldPasswordField = `old_${this.config.password}`
-    this._passwordConfirmationField = `${this.config.password}_confirmation`
+    this._oldPasswordField = `old_${this.config.password}`;
+    this._passwordConfirmationField = `${this.config.password}_confirmation`;
 
-    this.Hash = Hash
-    this.Event = Event
-    this.Validator = Validator
+    this.Hash = Hash;
+    this.Event = Event;
+    this.Validator = Validator;
 
-    this._encrypter = Encryption.getInstance({ hmac: false })
-    this._model = null
+    this._encrypter = Encryption.getInstance({ hmac: false });
+    this._model = null;
   }
 
   /**
@@ -83,8 +83,8 @@ class Persona {
    *
    * @private
    */
-  _getEmail (payload) {
-    return payload[this.config.email]
+  _getEmail(payload) {
+    return payload[this.config.email];
   }
 
   /**
@@ -98,11 +98,11 @@ class Persona {
    *
    * @private
    */
-  _getPassword (payload) {
-    return payload[this.config.password]
+  _getPassword(payload) {
+    return payload[this.config.password];
   }
 
-   /**
+  /**
    * Returns the security question value from an object
    *
    * @method _getAnswer
@@ -113,8 +113,8 @@ class Persona {
    *
    * @private
    */
-  _getAnswer (payload) {
-    return payload[this.config.questionAnswer]
+  _getAnswer(payload) {
+    return payload[this.config.questionAnswer];
   }
 
   /**
@@ -127,8 +127,8 @@ class Persona {
    *
    * @private
    */
-  _setEmail (payload, email) {
-    payload[this.config.email] = email
+  _setEmail(payload, email) {
+    payload[this.config.email] = email;
   }
 
   /**
@@ -141,11 +141,11 @@ class Persona {
    *
    * @private
    */
-  _setPassword (payload, password) {
-    payload[this.config.password] = password
+  _setPassword(payload, password) {
+    payload[this.config.password] = password;
   }
 
-    /**
+  /**
    * Sets security question answer field value on an object
    *
    * @method _setAnswer
@@ -155,8 +155,8 @@ class Persona {
    *
    * @private
    */
-  _setAnswer (payload, password) {
-    payload[this.config.questionAnswer] = answer
+  _setAnswer(payload, password) {
+    payload[this.config.questionAnswer] = answer;
   }
 
   /**
@@ -172,15 +172,15 @@ class Persona {
    *
    * @private
    */
-  _makeCustomMessage (key, data, defaultValue) {
-    const customMessage = this.getMessages()[key]
+  _makeCustomMessage(key, data, defaultValue) {
+    const customMessage = this.getMessages()[key];
     if (!customMessage) {
-      return defaultValue
+      return defaultValue;
     }
 
     return customMessage.replace(/{{\s?(\w+)\s?}}/g, (match, group) => {
-      return data[group] || ''
-    })
+      return data[group] || "";
+    });
   }
 
   /**
@@ -193,11 +193,15 @@ class Persona {
    *
    * @private
    */
-  _addTokenConstraints (query, type) {
+  _addTokenConstraints(query, type) {
     query
-      .where('type', type)
-      .where('is_revoked', false)
-      .where('updated_at', '>=', moment().subtract(24, 'hours').format(this.config.dateFormat))
+      .where("type", type)
+      .where("is_revoked", false)
+      .where(
+        "updated_at",
+        ">=",
+        moment().subtract(24, "hours").format(this.config.dateFormat)
+      );
   }
 
   /**
@@ -217,18 +221,18 @@ class Persona {
    * const token = await Persona.generateToken(user, 'email')
    * ```
    */
-  async generateToken (user, type) {
-    const query = user.tokens()
-    this._addTokenConstraints(query, type)
+  async generateToken(user, type) {
+    const query = user.tokens();
+    this._addTokenConstraints(query, type);
 
-    const row = await query.first()
+    const row = await query.first();
     if (row) {
-      return row.token
+      return row.token;
     }
 
-    const token = this._encrypter.encrypt(randtoken.generate(16))
-    await user.tokens().create({ type, token })
-    return token
+    const token = this._encrypter.encrypt(randtoken.generate(16));
+    await user.tokens().create({ type, token });
+    return token;
   }
 
   /**
@@ -254,12 +258,12 @@ class Persona {
    * const user = tokenRow.getRelated('user')
    * ```
    */
-  async getToken (token, type) {
-    const query = this.getModel().prototype.tokens().RelatedModel.query()
-    this._addTokenConstraints(query, type)
-
-    const row = await query.where('token', token).with('user').first()
-    return row && row.getRelated('user') ? row : null
+  async getToken(token, type) {
+    const query = this.getModel().prototype.tokens().RelatedModel.query();
+    this._addTokenConstraints(query, type);
+    const relationships = this.config.question ? "user.question" : "user";
+    const row = await query.where("token", token).with(relationships).first();
+    return row && row.getRelated("user") ? row : null;
   }
 
   /**
@@ -272,9 +276,9 @@ class Persona {
    *
    * @return {void}
    */
-  async removeToken (token, type) {
-    const query = this.getModel().prototype.tokens().RelatedModel.query()
-    await query.where('token', token).where('type', type).delete()
+  async removeToken(token, type) {
+    const query = this.getModel().prototype.tokens().RelatedModel.query();
+    await query.where("token", token).where("type", type).delete();
   }
 
   /**
@@ -284,11 +288,11 @@ class Persona {
    *
    * @return {Model}
    */
-  getModel () {
+  getModel() {
     if (!this._model) {
-      this._model = use(this.config.model)
+      this._model = use(this.config.model);
     }
-    return this._model
+    return this._model;
   }
 
   /**
@@ -301,8 +305,10 @@ class Persona {
    *
    * @return {Object}
    */
-  getMessages (action) {
-    return typeof (this.config.validationMessages) === 'function' ? this.config.validationMessages(action) : {}
+  getMessages(action) {
+    return typeof this.config.validationMessages === "function"
+      ? this.config.validationMessages(action)
+      : {};
   }
 
   /**
@@ -312,8 +318,8 @@ class Persona {
    *
    * @return {String}
    */
-  getTable () {
-    return this.getModel().table
+  getTable() {
+    return this.getModel().table;
   }
 
   /**
@@ -323,20 +329,23 @@ class Persona {
    *
    * @return {Object}
    */
-  registerationRules () {
-    return this.config.uids.reduce((result, uid) => {
-      const rules = ['required']
-      if (uid === this.config.email) {
-        rules.push('email')
+  registerationRules() {
+    return this.config.uids.reduce(
+      (result, uid) => {
+        const rules = ["required"];
+        if (uid === this.config.email) {
+          rules.push("email");
+        }
+
+        rules.push(`unique:${this.getTable()},${uid}`);
+
+        result[uid] = rules.join("|");
+        return result;
+      },
+      {
+        [this.config.password]: "required|confirmed",
       }
-
-      rules.push(`unique:${this.getTable()},${uid}`)
-
-      result[uid] = rules.join('|')
-      return result
-    }, {
-      [this.config.password]: 'required|confirmed'
-    })
+    );
   }
 
   /**
@@ -348,14 +357,18 @@ class Persona {
    *
    * @return {Object}
    */
-  updateEmailRules (userId) {
+  updateEmailRules(userId) {
     if (!userId) {
-      throw new Error('updateEmailRules needs the current user id to generate the validation rules')
+      throw new Error(
+        "updateEmailRules needs the current user id to generate the validation rules"
+      );
     }
 
     return {
-      [this.config.email]: `required|email|unique:${this.getTable()},${this.config.email},${this.getModel().primaryKey},${userId}`
-    }
+      [this.config.email]: `required|email|unique:${this.getTable()},${
+        this.config.email
+      },${this.getModel().primaryKey},${userId}`,
+    };
   }
 
   /**
@@ -367,19 +380,19 @@ class Persona {
    *
    * @return {Object}
    */
-  updatePasswordRules (enforceOldPassword = true) {
+  updatePasswordRules(enforceOldPassword = true) {
     const rules = {
-      [this.config.password]: 'required|confirmed'
-    }
+      [this.config.password]: "required|confirmed",
+    };
 
     /**
      * Enforcing to define old password
      */
     if (enforceOldPassword) {
-      rules[this._oldPasswordField] = 'required'
+      rules[this._oldPasswordField] = "required";
     }
 
-    return rules
+    return rules;
   }
 
   /**
@@ -389,11 +402,11 @@ class Persona {
    *
    * @return {String}
    */
-  loginRules () {
+  loginRules() {
     return {
-      'uid': 'required',
-      [this.config.password]: 'required'
-    }
+      uid: "required",
+      [this.config.password]: "required",
+    };
   }
 
   /**
@@ -406,9 +419,9 @@ class Persona {
    *
    * @return {void}
    */
-  massageRegisterationData (payload) {
-    delete payload[this._passwordConfirmationField]
-    payload.account_status = this.config.newAccountState
+  massageRegisterationData(payload) {
+    delete payload[this._passwordConfirmationField];
+    payload.account_status = this.config.newAccountState;
   }
 
   /**
@@ -425,11 +438,17 @@ class Persona {
    *
    * @throws {ValidationException} If validation fails
    */
-  async runValidation (payload, rules, action) {
-    const validation = await this.Validator.validateAll(payload, rules, this.getMessages(action))
+  async runValidation(payload, rules, action) {
+    const validation = await this.Validator.validateAll(
+      payload,
+      rules,
+      this.getMessages(action)
+    );
 
     if (validation.fails()) {
-      throw this.Validator.ValidationException.validationFailed(validation.messages())
+      throw this.Validator.ValidationException.validationFailed(
+        validation.messages()
+      );
     }
   }
 
@@ -445,17 +464,21 @@ class Persona {
    *
    * @return {void}
    */
-  async verifyPassword (newPassword, oldPassword, field = this.config.password) {
-    const verified = await this.Hash.verify(newPassword, oldPassword)
+  async verifyPassword(newPassword, oldPassword, field = this.config.password) {
+    const verified = await this.Hash.verify(newPassword, oldPassword);
     if (!verified) {
-      const data = { field, validation: 'mis_match', value: newPassword }
+      const data = { field, validation: "mis_match", value: newPassword };
       throw this.Validator.ValidationException.validationFailed([
         {
-          message: this._makeCustomMessage(`${field}.mis_match`, data, 'Invalid password'),
+          message: this._makeCustomMessage(
+            `${field}.mis_match`,
+            data,
+            "Invalid password"
+          ),
           field: field,
-          validation: 'mis_match'
-        }
-      ])
+          validation: "mis_match",
+        },
+      ]);
     }
   }
 
@@ -468,32 +491,36 @@ class Persona {
    *
    * @return {Object}
    */
-  async getUserByUids (value) {
-    const userQuery = this.getModel().query()
+  async getUserByUids(value) {
+    const userQuery = this.getModel().query();
 
     /**
      * Search for all uids to allow login with
      * any identifier
      */
-    this.config.uids.forEach((uid) => userQuery.orWhere(uid, value))
+    this.config.uids.forEach((uid) => userQuery.orWhere(uid, value));
 
     /**
      * Search for user
      */
-    const user = await userQuery.first()
+    const user = await userQuery.first();
     if (!user) {
-      const data = { field: 'uid', validation: 'exists', value }
+      const data = { field: "uid", validation: "exists", value };
 
       throw this.Validator.ValidationException.validationFailed([
         {
-          message: this._makeCustomMessage('uid.exists', data, 'Unable to locate user'),
-          field: 'uid',
-          validation: 'exists'
-        }
-      ])
+          message: this._makeCustomMessage(
+            "uid.exists",
+            data,
+            "Unable to locate user"
+          ),
+          field: "uid",
+          validation: "exists",
+        },
+      ]);
     }
 
-    return user
+    return user;
   }
 
   /**
@@ -515,27 +542,27 @@ class Persona {
    * await Persona.register(payload)
    * ```
    */
-  async register (payload, callback) {
-    await this.runValidation(payload, this.registerationRules(), 'register')
-    this.massageRegisterationData(payload)
+  async register(payload, callback) {
+    await this.runValidation(payload, this.registerationRules(), "register");
+    this.massageRegisterationData(payload);
 
-    if (typeof (callback) === 'function') {
-      await callback(payload)
+    if (typeof callback === "function") {
+      await callback(payload);
     }
 
-    const user = await this.getModel().create(payload)
+    const user = await this.getModel().create(payload);
 
     /**
      * Get email verification token for the user
      */
-    const token = await this.generateToken(user, 'email')
+    const token = await this.generateToken(user, "email");
 
     /**
      * Fire new::user event to app to wire up events
      */
-    this.Event.fire('user::created', { user, token })
+    this.Event.fire("user::created", { user, token });
 
-    return user
+    return user;
   }
 
   /**
@@ -554,20 +581,20 @@ class Persona {
    * await Persona.verify(payload)
    * ```
    */
-  async verify (payload, callback) {
-    await this.runValidation(payload, this.loginRules(), 'verify')
-    const user = await this.getUserByUids(payload.uid)
+  async verify(payload, callback) {
+    await this.runValidation(payload, this.loginRules(), "verify");
+    const user = await this.getUserByUids(payload.uid);
 
-    const enteredPassword = this._getPassword(payload)
-    const userPassword = this._getPassword(user)
+    const enteredPassword = this._getPassword(payload);
+    const userPassword = this._getPassword(user);
 
-    if (typeof (callback) === 'function') {
-      await callback(user, enteredPassword)
+    if (typeof callback === "function") {
+      await callback(user, enteredPassword);
     }
 
-    await this.verifyPassword(enteredPassword, userPassword)
+    await this.verifyPassword(enteredPassword, userPassword);
 
-    return user
+    return user;
   }
 
   /**
@@ -586,24 +613,24 @@ class Persona {
    * await Persona.verifyEmail(token)
    * ```
    */
-  async verifyEmail (token) {
-    const tokenRow = await this.getToken(token, 'email')
+  async verifyEmail(token) {
+    const tokenRow = await this.getToken(token, "email");
     if (!tokenRow) {
-      throw InvalidTokenException.invalidToken()
+      throw InvalidTokenException.invalidToken();
     }
 
-    const user = tokenRow.getRelated('user')
+    const user = tokenRow.getRelated("user");
 
     /**
      * Update user account only when in the newAccountState
      */
     if (user.account_status === this.config.newAccountState) {
-      user.account_status = this.config.verifiedAccountState
-      await user.save()
-      await this.removeToken(token, 'email')
+      user.account_status = this.config.verifiedAccountState;
+      await user.save();
+      await this.removeToken(token, "email");
     }
 
-    return user
+    return user;
   }
 
   /**
@@ -627,26 +654,30 @@ class Persona {
    * }
    * ```
    */
-  async updateEmail (user, newEmail) {
-    await this.runValidation({ [this.config.email]: newEmail }, this.updateEmailRules(user.primaryKeyValue), 'emailUpdate')
+  async updateEmail(user, newEmail) {
+    await this.runValidation(
+      { [this.config.email]: newEmail },
+      this.updateEmailRules(user.primaryKeyValue),
+      "emailUpdate"
+    );
 
-    const oldEmail = this._getEmail(user)
+    const oldEmail = this._getEmail(user);
 
     /**
      * Updating user details
      */
-    user.account_status = this.config.newAccountState
-    this._setEmail(user, newEmail)
-    await user.save()
+    user.account_status = this.config.newAccountState;
+    this._setEmail(user, newEmail);
+    await user.save();
 
     /**
      * Getting a new token for verifying the email and firing
      * the event
      */
-    const token = await this.generateToken(user, 'email')
-    this.Event.fire('email::changed', { user, oldEmail, token })
+    const token = await this.generateToken(user, "email");
+    this.Event.fire("email::changed", { user, oldEmail, token });
 
-    return user
+    return user;
   }
 
   /**
@@ -669,35 +700,37 @@ class Persona {
    * await Persona.updateProfile(user, payload)
    * ```
    */
-  async updateProfile (user, payload) {
+  async updateProfile(user, payload) {
     /**
      * Do not allow changing passwords here. Password flow needs
      * old password to be verified
      */
     if (this._getPassword(payload)) {
-      throw new Error('Changing password is not allowed via updateProfile method. Instead use updatePassword')
+      throw new Error(
+        "Changing password is not allowed via updateProfile method. Instead use updatePassword"
+      );
     }
 
-    const newEmail = this._getEmail(payload)
-    const oldEmail = this._getEmail(user)
+    const newEmail = this._getEmail(payload);
+    const oldEmail = this._getEmail(user);
 
     /**
      * Update new props with the user attributes
      */
-    user.merge(payload)
+    user.merge(payload);
 
     if (newEmail !== undefined && oldEmail !== newEmail) {
       /**
        * We need to reset the user email, since we are calling
        * updateEmail and it needs user old email address
        */
-      this._setEmail(user, oldEmail)
-      await this.updateEmail(user, newEmail)
+      this._setEmail(user, oldEmail);
+      await this.updateEmail(user, newEmail);
     } else {
-      await user.save()
+      await user.save();
     }
 
-    return user
+    return user;
   }
 
   /**
@@ -718,21 +751,29 @@ class Persona {
    * await Persona.updatePassword(user, payload)
    * ```
    */
-  async updatePassword (user, payload) {
-    await this.runValidation(payload, this.updatePasswordRules(), 'passwordUpdate')
+  async updatePassword(user, payload) {
+    await this.runValidation(
+      payload,
+      this.updatePasswordRules(),
+      "passwordUpdate"
+    );
 
-    const oldPassword = payload[this._oldPasswordField]
-    const newPassword = this._getPassword(payload)
-    const existingOldPassword = this._getPassword(user)
+    const oldPassword = payload[this._oldPasswordField];
+    const newPassword = this._getPassword(payload);
+    const existingOldPassword = this._getPassword(user);
 
-    await this.verifyPassword(oldPassword, existingOldPassword, this._oldPasswordField)
+    await this.verifyPassword(
+      oldPassword,
+      existingOldPassword,
+      this._oldPasswordField
+    );
 
-    this._setPassword(user, newPassword)
-    await user.save()
+    this._setPassword(user, newPassword);
+    await user.save();
 
-    this.Event.fire('password::changed', { user })
+    this.Event.fire("password::changed", { user });
 
-    return user
+    return user;
   }
 
   /**
@@ -752,13 +793,13 @@ class Persona {
    * await Persona.forgotPassword(email)
    * ```
    */
-  async forgotPassword (uid) {
-    const user = await this.getUserByUids(uid)
-    const token = await this.generateToken(user, 'password')
+  async forgotPassword(uid) {
+    const user = await this.getUserByUids(uid);
+    const token = await this.generateToken(user, "password");
 
-    this.Event.fire('forgot::password', { user, token })
+    this.Event.fire("forgot::password", { user, token });
 
-    return token
+    return token;
   }
 
   /**
@@ -780,34 +821,38 @@ class Persona {
    * await Persona.updatePasswordByToken(token, payload)
    * ```
    */
-  async updatePasswordByToken (token, payload) {
-    await this.runValidation(payload, this.updatePasswordRules(false), 'passwordUpdate')
+  async updatePasswordByToken(token, payload) {
+    await this.runValidation(
+      payload,
+      this.updatePasswordRules(false),
+      "passwordUpdate"
+    );
 
-    const tokenRow = await this.getToken(token, 'password')
+    const tokenRow = await this.getToken(token, "password");
     if (!tokenRow) {
-      throw InvalidTokenException.invalidToken()
+      throw InvalidTokenException.invalidToken();
     }
 
-    const user = tokenRow.getRelated('user')
-    
+    const user = tokenRow.getRelated("user");
+
     // If a security questions are configured...compare the preset answer with the answer given
-    if (this.config.question){
-      const answer = this._getAnswer(user)
-      const guess = this._getAnswer(payload)
-      
+    if (this.config.question) {
+      const answer = this._getAnswer(user);
+      const guess = this._getAnswer(payload);
+
       if (guess.toLowerCase() !== answer.toLowerCase()) {
-        throw InvalidAnswerException.invalidAnswer()
+        throw InvalidAnswerException.invalidAnswer();
       }
     }
-    
-    this._setPassword(user, this._getPassword(payload))
 
-    await user.save()
-    await this.removeToken(token, 'password')
+    this._setPassword(user, this._getPassword(payload));
 
-    this.Event.fire('password::recovered', { user })
-    return user
+    await user.save();
+    await this.removeToken(token, "password");
+
+    this.Event.fire("password::recovered", { user });
+    return user;
   }
 }
 
-module.exports = Persona
+module.exports = Persona;
