@@ -483,6 +483,40 @@ class Persona {
   }
 
   /**
+   * Verifies two security answers and throws exception when they are not
+   * valid
+   *
+   * @method verifyAnswer
+   *
+   * @param  {String}       guessedAnswer
+   * @param  {String}       answer
+   * @param  {String}       [field = this.config.questionAnswer]
+   *
+   * @return {void}
+   */
+  async verifyAnswer(
+    guessedAnswer,
+    answer,
+    field = this.config.questionAnswer
+  ) {
+    const verified = await this.Hash.verify(guessedAnswer, answer);
+    if (!verified) {
+      const data = { field, validation: "mis_match", value: guessedAnswer };
+      throw this.Validator.ValidationException.validationFailed([
+        {
+          message: this._makeCustomMessage(
+            `${field}.mis_match`,
+            data,
+            "Invalid answer"
+          ),
+          field: field,
+          validation: "mis_match",
+        },
+      ]);
+    }
+  }
+
+  /**
    * Finds the user by looking for any of the given uids
    *
    * @method getUserByUids
@@ -839,10 +873,7 @@ class Persona {
     if (this.config.question) {
       const answer = this._getAnswer(user);
       const guess = this._getAnswer(payload);
-
-      if (guess.toLowerCase() !== answer.toLowerCase()) {
-        throw InvalidAnswerException.invalidAnswer();
-      }
+      this.verifyAnswer(guess, answer);
     }
 
     this._setPassword(user, this._getPassword(payload));
