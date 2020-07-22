@@ -879,7 +879,7 @@ class Persona {
     if (this.config.question) {
       const answer = this._getAnswer(user);
       const guess = this._getAnswer(payload);
-      this.verifyAnswer(guess, answer);
+      await this.verifyAnswer(guess, answer);
     }
 
     this._setPassword(user, this._getPassword(payload));
