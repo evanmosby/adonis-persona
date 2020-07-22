@@ -499,7 +499,7 @@ class Persona {
     answer,
     field = this.config.questionAnswer
   ) {
-    const verified = await this.Hash.verify(guessedAnswer, answer);
+    const verified = await this.Hash.verify(guessedAnswer.toLowerCase(), answer);
     if (!verified) {
       const data = { field, validation: "mis_match", value: guessedAnswer };
       throw this.Validator.ValidationException.validationFailed([
