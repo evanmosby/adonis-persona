@@ -263,6 +263,9 @@ class Persona {
     this._addTokenConstraints(query, type);
     const relationships = this.config.question ? "user.question" : "user";
     const row = await query.where("token", token).with(relationships).first();
+    if (!row) {
+      throw InvalidTokenException.invalidToken();
+    }
     return row && row.getRelated("user") ? row : null;
   }
 
@@ -499,7 +502,10 @@ class Persona {
     answer,
     field = this.config.questionAnswer
   ) {
-    const verified = await this.Hash.verify(guessedAnswer.toLowerCase(), answer);
+    const verified = await this.Hash.verify(
+      guessedAnswer.toLowerCase(),
+      answer
+    );
     if (!verified) {
       const data = { field, validation: "mis_match", value: guessedAnswer };
       throw this.Validator.ValidationException.validationFailed([
