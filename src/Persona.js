@@ -833,8 +833,16 @@ class Persona {
    * await Persona.forgotPassword(email)
    * ```
    */
-  async forgotPassword(uid) {
+  async forgotPassword(uid, payload) {
     const user = await this.getUserByUids(uid);
+
+    // If a security questions are configured...compare the preset answer with the answer given
+    if (this.config.question) {
+      const answer = this._getAnswer(user);
+      const guess = this._getAnswer(payload);
+      await this.verifyAnswer(guess, answer);
+    }
+
     const token = await this.generateToken(user, "password");
 
     this.Event.fire("forgot::password", { user, token });
@@ -874,13 +882,6 @@ class Persona {
     }
 
     const user = tokenRow.getRelated("user");
-
-    // If a security questions are configured...compare the preset answer with the answer given
-    if (this.config.question) {
-      const answer = this._getAnswer(user);
-      const guess = this._getAnswer(payload);
-      await this.verifyAnswer(guess, answer);
-    }
 
     this._setPassword(user, this._getPassword(payload));
 
