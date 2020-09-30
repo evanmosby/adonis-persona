@@ -837,7 +837,8 @@ class Persona {
     const user = await this.getUserByUids(uid);
 
     // If a security questions are configured...compare the preset answer with the answer given
-    if (this.config.question) {
+    // payload must be passed in. IF its not, the assumption is we're bypassing the user (admin) reset
+    if (payload && this.config.question) {
       const answer = this._getAnswer(user);
       const guess = this._getAnswer(payload);
       await this.verifyAnswer(guess, answer);
