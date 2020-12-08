@@ -340,7 +340,7 @@ class Persona {
           rules.push("email");
         }
 
-        rules.push(`unique:${this.getTable()},${uid}`);
+        rules.push(`unique:${this.config.model},${uid}`);
 
         result[uid] = rules.join("|");
         return result;
