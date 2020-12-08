@@ -368,7 +368,7 @@ class Persona {
     }
 
     return {
-      [this.config.email]: `required|email|unique:${this.getTable()},${
+      [this.config.email]: `required|email|unique:${this.config.model},${
         this.config.email
       },${this.getModel().primaryKey},${userId}`,
     };
