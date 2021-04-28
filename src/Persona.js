@@ -229,7 +229,7 @@ class Persona {
       return row.token;
     }
 
-    const token = randtoken.generate(16);
+    const token = randtoken.generate(32);
     await user.tokens().create({ type, token });
     return token;
   }
