@@ -102,7 +102,22 @@ class Persona {
   }
 
   /**
-   * Returns the security question value from an object
+   * Returns the security question  from an object
+   *
+   * @method _getQuestion
+   *
+   * @param  {Object}         payload
+   *
+   * @return {String}
+   *
+   * @private
+   */
+  _getQuestion(payload) {
+    return payload[this.config.question];
+  }
+
+  /**
+   * Returns the security question answer from an object
    *
    * @method _getAnswer
    *
@@ -147,14 +162,16 @@ class Persona {
   /**
    * Sets security question answer field value on an object
    *
-   * @method _setAnswer
+   * @method _setQuestionAnswer
    *
    * @param  {Object}     payload
+   * @param  {Integer}     question
    * @param  {String}     answer
    *
    * @private
    */
-  _setAnswer(payload, password) {
+  _setQuestionAnswer(payload, question, answer) {
+    payload[this.config.question] = question;
     payload[this.config.questionAnswer] = answer;
   }
 
@@ -741,17 +758,28 @@ class Persona {
    */
   async updateProfile(user, payload) {
     /**
-     * Do not allow changing passwords here. Password flow needs
-     * old password to be verified
+     * If user is attempting to change the security
      */
-    if (this._getPassword(payload)) {
-      throw new Error(
-        "Changing password is not allowed via updateProfile method. Instead use updatePassword"
-      );
+    if (this._getAnswer(payload) && this.config.question) {
+      const enteredPassword = this._getPassword(payload);
+      const userPassword = this._getPassword(user);
+
+      await this.verifyPassword(enteredPassword, userPassword);
     }
 
     const newEmail = this._getEmail(payload);
     const oldEmail = this._getEmail(user);
+
+    /**
+     * Do not allow changing passwords here. Password flow needs
+     * old password to be verified
+     */
+    if (this._getPassword(payload)) {
+      delete payload[this.config.password];
+      // throw new Error(
+      //   "Changing password is not allowed via updateProfile method. Instead use updatePassword"
+      // );
+    }
 
     /**
      * Update new props with the user attributes
@@ -768,6 +796,40 @@ class Persona {
     } else {
       await user.save();
     }
+
+    return user;
+  }
+
+  /**
+   * Updates the user security question. This method will emit `question::changed` event.
+   *
+   * @method updateQuestion
+   *
+   * @param  {Object}       user
+   * @param  {Object}       payload
+   *
+   * @return {User}
+   *
+   * @example
+   * ```js
+   * const user = auth.user
+   * const payload = request.only([ 'password', 'security_question_id','security_question_answer'])
+   *
+   * await Persona.updateQuestion(user, payload)
+   * ```
+   */
+  async updateQuestionAnswer(user, payload) {
+    const password = this._getPassword(payload);
+    const existingPassword = this._getPassword(user);
+    await this.verifyPassword(password, existingPassword, "password");
+
+    const question = this._getQuestion(payload);
+    const answer = this._getAnswer(payload);
+
+    this._setQuestionAnswer(user, question, answer);
+    await user.save();
+
+    this.Event.fire("question::changed", { user });
 
     return user;
   }
